@@ -52,5 +52,6 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add package.json
-          git diff --cached --quiet || git commit -m "chore: update snapshot version [skip ci]"
+          VERSION=$(node -p "require('./package.json').version")
+          git diff --cached --quiet || git commit -m "chore: snapshot version ${VERSION} [skip ci]"
           git push
