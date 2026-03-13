@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   release-main:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     runs-on: ubuntu-latest
 
     steps:
@@ -26,6 +27,18 @@ jobs:
 
       - name: Normalize release version
         run: bash scripts/strip-snapshot-version.sh
+
+      - name: Commit normalized version if needed
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add package.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: normalize release version [skip ci]"
+            git push
+          else
+            echo "No package.json normalization changes to commit"
+          fi
 
       - name: Install dependencies
         run: npm install
@@ -48,6 +61,8 @@ jobs:
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "Tag $TAG already exists"
           else
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
             git tag "$TAG"
             git push origin "$TAG"
           fi
