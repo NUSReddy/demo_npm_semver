@@ -30,11 +30,13 @@ jobs:
 
       - name: Commit normalized version if needed
         run: |
+          CLEAN_VERSION=$(node -p "require('./package.json').version")
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add package.json
+
           if ! git diff --cached --quiet; then
-            git commit -m "chore: normalize release version [skip ci]"
+            git commit -m "chore: normalize release version ${CLEAN_VERSION} [skip ci]"
             git push
           else
             echo "No package.json normalization changes to commit"
@@ -53,7 +55,8 @@ jobs:
         id: version
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          CLEAN_VERSION="${VERSION%%-*}"
+          echo "version=$CLEAN_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Create git tag if not exists
         run: |
