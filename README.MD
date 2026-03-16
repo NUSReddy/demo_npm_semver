@@ -74,6 +74,22 @@ This tag is pushed automatically.
 
 ---
 
+## Version Ahead Protection
+
+This validation runs in both workflows as a safeguard at two stages. The feature build workflow validates that the feature branch version is strictly greater than the current `main` version before allowing the build to proceed. The main release workflow additionally validates that the incoming version is not behind the latest tagged release before normalizing and tagging. This prevents stale feature branches from merging into `main` with an older version, even if branch protection rules are bypassed.
+
+For example, if `main` is already at `1.3.5` (after a previous feature merge) and a feature branch has version `1.3.4-10`, the CI build will fail with:
+
+```
+Error: feature branch version must be greater than main version
+Main version   : 1.3.5
+Branch version : 1.3.4
+```
+
+The feature branch must update `package.json` to a version higher than `main` before it can be merged.
+
+---
+
 ## Duplicate Version Protection
 
 The workflow prevents duplicate releases.
@@ -376,10 +392,11 @@ Triggers on pushes to `main`.
 
 Responsibilities:
 
-1. Strip the snapshot suffix to normalize the release version
-2. Commit the normalized version if changed
-3. Install dependencies, build, and run tests
-4. Create and push a git tag (e.g. `v1.2.0`) if it doesn't already exist
+1. Validate that the incoming version is not behind the latest tagged release
+2. Strip the snapshot suffix to normalize the release version
+3. Commit the normalized version if changed
+4. Install dependencies, build, and run tests
+5. Create and push a git tag (e.g. `v1.2.0`) if it doesn't already exist
 
 Example commit:
 
