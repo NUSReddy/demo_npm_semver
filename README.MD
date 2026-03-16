@@ -1,6 +1,6 @@
-# Demo NPM Semantic Version Automation
+# Demo NPM Semantic Version
 
-This repository demonstrates a **fully automated semantic version workflow for Node.js projects** using **GitHub Actions**, **feature branches**, and **snapshot versions**.
+This repository demonstrates a **semantic version workflow for Node.js projects** using **GitHub Actions**, **feature branches**, and **snapshot versions**.
 
 The workflow automatically:
 
@@ -74,6 +74,22 @@ This tag is pushed automatically.
 
 ---
 
+## Version Ahead Protection
+
+This validation runs in both workflows as a safeguard at two stages. The feature build workflow validates that the feature branch version is strictly greater than the current `main` version before allowing the build to proceed. The main release workflow additionally validates that the incoming version is not behind the latest tagged release before normalizing and tagging. This prevents stale feature branches from merging into `main` with an older version, even if branch protection rules are bypassed.
+
+For example, if `main` is already at `1.3.5` (after a previous feature merge) and a feature branch has version `1.3.4-10`, the CI build will fail with:
+
+```
+Error: feature branch version must be greater than main version
+Main version   : 1.3.5
+Branch version : 1.3.4
+```
+
+The feature branch must update `package.json` to a version higher than `main` before it can be merged.
+
+---
+
 ## Duplicate Version Protection
 
 The workflow prevents duplicate releases.
@@ -103,7 +119,7 @@ Rules:
 Example history:
 
 ```
-Merge PR feature/payment
+Merge PR feature/notification
 chore: normalize release version 1.2.0
 tag: v1.2.0
 ```
@@ -124,7 +140,7 @@ Examples:
 
 ```
 feature/login
-feature/payment
+feature/notification
 feature/user-profile
 ```
 
@@ -165,7 +181,7 @@ Example:
 ```bash
 git checkout main
 git pull
-git checkout -b feature/payment
+git checkout -b feature/notification
 ```
 
 ---
@@ -183,7 +199,7 @@ Example:
 Commit:
 
 ```
-feat: add payment service
+feat: add notification service
 ```
 
 ---
@@ -191,7 +207,7 @@ feat: add payment service
 ## Step 3 — Push Feature Branch
 
 ```bash
-git push origin feature/payment
+git push origin feature/notification
 ```
 
 The CI pipeline will:
@@ -239,7 +255,7 @@ chore: snapshot version 1.2.0-3 [skip ci]
 Create PR:
 
 ```
-feature/payment → main
+feature/notification → main
 ```
 
 ---
@@ -283,7 +299,7 @@ main: 1.1.0
 Create branch:
 
 ```
-feature/payment
+feature/notification
 ```
 
 Update version:
@@ -331,12 +347,12 @@ v1.2.0
 # Commit History Example
 
 ```
-feat: add payment service
+feat: add notification service
 chore: snapshot version 1.2.0-1
 chore: snapshot version 1.2.0-2
 chore: snapshot version 1.2.0-3
 
-Merge pull request #5 from feature/payment
+Merge pull request #5 from feature/notification
 
 chore: normalize release version 1.2.0 [skip ci]
 ```
@@ -351,15 +367,16 @@ v1.2.0
 
 # GitHub Actions Workflows
 
-Two pipelines exist.
+## Feature Build Workflow (`feature-build.yml`)
 
-## Feature Branch Workflow
+Triggers on pushes to `feature/**` branches.
 
 Responsibilities:
 
-- Detect feature branch
-- Increment snapshot version
-- Commit snapshot version
+1. Validate the feature branch version is greater than `main` and not reserved by another branch
+2. Install dependencies, build, and run tests
+3. Bump the snapshot version
+4. Commit and push the snapshot version
 
 Example commit:
 
@@ -369,14 +386,23 @@ chore: snapshot version 1.2.0-2 [skip ci]
 
 ---
 
-## Main Release Workflow
+## Main Release Workflow (`main-release.yml`)
+
+Triggers on pushes to `main`.
 
 Responsibilities:
 
-1. Remove snapshot suffix
-2. Commit normalized version
-3. Run build & tests
-4. Create release tag
+1. Validate that the incoming version is not behind the latest tagged release
+2. Strip the snapshot suffix to normalize the release version
+3. Commit the normalized version if changed
+4. Install dependencies, build, and run tests
+5. Create and push a git tag (e.g. `v1.2.0`) if it doesn't already exist
+
+Example commit:
+
+```
+chore: normalize release version 1.2.0 [skip ci]
+```
 
 ---
 
@@ -390,8 +416,9 @@ Responsibilities:
 │       └── main-release.yml
 │
 ├── scripts
-│   ├── increment-snapshot.sh
-│   └── strip-snapshot-version.sh
+│   ├── bump-snapshot-version.sh
+│   ├── strip-snapshot-version.sh
+│   └── validate-feature-version.sh
 │
 ├── src
 │   └── index.js
@@ -400,16 +427,43 @@ Responsibilities:
 │   └── version.test.js
 │
 ├── package.json
-└── README.md
+└── README.MD
 ```
 
 ---
 
 # Scripts
 
+## validate-feature-version.sh
+
+Validates the feature branch version before building. Ensures the version is a clean semver, is greater than `main`, and is not already reserved by another feature branch.
+
+```bash
+bash scripts/validate-feature-version.sh
+```
+
+---
+
+## bump-snapshot-version.sh
+
+Increments the snapshot version suffix, or adds `-1` if no snapshot suffix exists.
+
+Example:
+
+```
+1.2.0 → 1.2.0-1
+1.2.0-1 → 1.2.0-2
+```
+
+```bash
+bash scripts/bump-snapshot-version.sh
+```
+
+---
+
 ## strip-snapshot-version.sh
 
-Removes snapshot suffix.
+Removes the snapshot suffix to produce a clean release version.
 
 Example:
 
@@ -417,16 +471,8 @@ Example:
 1.2.0-3 → 1.2.0
 ```
 
----
-
-## increment-snapshot.sh
-
-Increments snapshot version.
-
-Example:
-
-```
-1.2.0-1 → 1.2.0-2
+```bash
+bash scripts/strip-snapshot-version.sh
 ```
 
 ---
@@ -467,25 +513,58 @@ Git Tag | `v1.2.0` |
 
 # Benefits
 
-This approach provides:
+## Simplified Branch Strategy
 
-- Automated semantic versioning
-- Consistent Git tags
-- No manual version mistakes
-- Clean release history
+This approach uses only `feature/*` branches and `main`, removing the need for long-lived branches such as `develop`, `release`, `uat`, or `staging`. Multiple environment branches often lead to branch drift, repeated merge conflicts, confusion about which branch reflects the true release state, and harder rollback management. With this model, `main` is the single source of truth for releases, and Git tags on `main` are promoted across all environments.
+
+## Release and Backout Manifest Support
+
+Version tags make it straightforward to maintain release manifests and backout manifests for deployments.
+
+Example release manifest:
+
+```
+notification-service = v1.2.0
+auth-service    = v3.4.1
+order-service   = v2.1.5
+```
+
+Example backout manifest:
+
+```
+notification-service = v1.1.8
+auth-service    = v3.4.0
+order-service   = v2.1.4
+```
+
+Without proper version tagging, it becomes difficult to know exactly which code was released and what version should be rolled back.
+
+## Main Branch Protection
+
+The `main` branch must be protected with branch protection rules. Direct pushes and force pushes should be disabled. All changes to `main` must go through a pull request (merge request) with at least one approval. This ensures that every release version on `main` has been reviewed and approved, maintaining a trustworthy release history and preventing accidental overwrites of tagged releases.
+
+## One Main Branch for All Environments
+
+Instead of separate environment branches, teams map environments to specific tags from `main`:
+
+| Environment | Deployed Version |
+|---|---|
+| DEV | `v1.3.0` |
+| SIT | `v1.2.1` |
+| STG | `v1.2.0` |
+| PROD | `v1.2.0` |
+
+The same tagged artifact is promoted across environments rather than rebuilding from different branches.
+
+## Additional Benefits
+
+- Automated semantic versioning with no manual version mistakes
+- Consistent Git tags for productionised releases
+- Lower-environment deployments from feature branch snapshots
+- Reliable rollback to a previously known stable tag
+- Better auditability and traceability (what was deployed, when, and what changes are included)
+- Cleaner Git history and reduced merge complexity
 - Clear traceability from feature → release
-
----
-
-# Future Improvements
-
-Possible enhancements:
-
-- Automatic CHANGELOG generation
-- GitHub Releases creation
-- npm package publishing
-- automated minor/patch bump detection
-- release notes generation
 
 ---
 

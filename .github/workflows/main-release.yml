@@ -25,6 +25,28 @@ jobs:
         with:
           node-version: 20
 
+      - name: Validate version ahead of latest tag
+        run: |
+          INCOMING_VERSION=$(node -p "require('./package.json').version")
+          CLEAN_VERSION="${INCOMING_VERSION%%-*}"
+          LATEST_TAG=$(git tag --sort=-v:refname | head -n 1 || true)
+          if [[ -z "$LATEST_TAG" ]]; then
+            echo "No existing tags found, skipping version-ahead check"
+            exit 0
+          fi
+          LATEST_VERSION="${LATEST_TAG#v}"
+          IS_GREATER=$(python3 -c "
+          import sys
+          def parse(v): return tuple(map(int, v.split('.')))
+          print('true' if parse(sys.argv[1]) >= parse(sys.argv[2]) else 'false')
+          " "$CLEAN_VERSION" "$LATEST_VERSION")
+          if [[ "$IS_GREATER" != "true" ]]; then
+            echo "Error: incoming version ${CLEAN_VERSION} is not ahead of latest tagged release ${LATEST_VERSION}"
+            echo "This merge would downgrade the release version. Aborting."
+            exit 1
+          fi
+          echo "Version-ahead check passed: ${CLEAN_VERSION} >= ${LATEST_VERSION}"
+
       - name: Normalize release version
         run: bash scripts/strip-snapshot-version.sh
 
