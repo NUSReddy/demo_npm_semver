@@ -103,7 +103,7 @@ Rules:
 Example history:
 
 ```
-Merge PR feature/payment
+Merge PR feature/notification
 chore: normalize release version 1.2.0
 tag: v1.2.0
 ```
@@ -124,7 +124,7 @@ Examples:
 
 ```
 feature/login
-feature/payment
+feature/notification
 feature/user-profile
 ```
 
@@ -165,7 +165,7 @@ Example:
 ```bash
 git checkout main
 git pull
-git checkout -b feature/payment
+git checkout -b feature/notification
 ```
 
 ---
@@ -183,7 +183,7 @@ Example:
 Commit:
 
 ```
-feat: add payment service
+feat: add notification service
 ```
 
 ---
@@ -191,7 +191,7 @@ feat: add payment service
 ## Step 3 — Push Feature Branch
 
 ```bash
-git push origin feature/payment
+git push origin feature/notification
 ```
 
 The CI pipeline will:
@@ -239,7 +239,7 @@ chore: snapshot version 1.2.0-3 [skip ci]
 Create PR:
 
 ```
-feature/payment → main
+feature/notification → main
 ```
 
 ---
@@ -283,7 +283,7 @@ main: 1.1.0
 Create branch:
 
 ```
-feature/payment
+feature/notification
 ```
 
 Update version:
@@ -331,12 +331,12 @@ v1.2.0
 # Commit History Example
 
 ```
-feat: add payment service
+feat: add notification service
 chore: snapshot version 1.2.0-1
 chore: snapshot version 1.2.0-2
 chore: snapshot version 1.2.0-3
 
-Merge pull request #5 from feature/payment
+Merge pull request #5 from feature/notification
 
 chore: normalize release version 1.2.0 [skip ci]
 ```
@@ -507,7 +507,7 @@ Version tags make it straightforward to maintain release manifests and backout m
 Example release manifest:
 
 ```
-payment-service = v1.2.0
+notification-service = v1.2.0
 auth-service    = v3.4.1
 order-service   = v2.1.5
 ```
@@ -515,12 +515,16 @@ order-service   = v2.1.5
 Example backout manifest:
 
 ```
-payment-service = v1.1.8
+notification-service = v1.1.8
 auth-service    = v3.4.0
 order-service   = v2.1.4
 ```
 
 Without proper version tagging, it becomes difficult to know exactly which code was released and what version should be rolled back.
+
+## Main Branch Protection
+
+The `main` branch must be protected with branch protection rules. Direct pushes and force pushes should be disabled. All changes to `main` must go through a pull request (merge request) with at least one approval. This ensures that every release version on `main` has been reviewed and approved, maintaining a trustworthy release history and preventing accidental overwrites of tagged releases.
 
 ## One Main Branch for All Environments
 
