@@ -351,15 +351,16 @@ v1.2.0
 
 # GitHub Actions Workflows
 
-Two pipelines exist.
+## Feature Build Workflow (`feature-build.yml`)
 
-## Feature Branch Workflow
+Triggers on pushes to `feature/**` branches.
 
 Responsibilities:
 
-- Detect feature branch
-- Increment snapshot version
-- Commit snapshot version
+1. Validate the feature branch version is greater than `main` and not reserved by another branch
+2. Install dependencies, build, and run tests
+3. Bump the snapshot version
+4. Commit and push the snapshot version
 
 Example commit:
 
@@ -369,14 +370,22 @@ chore: snapshot version 1.2.0-2 [skip ci]
 
 ---
 
-## Main Release Workflow
+## Main Release Workflow (`main-release.yml`)
+
+Triggers on pushes to `main`.
 
 Responsibilities:
 
-1. Remove snapshot suffix
-2. Commit normalized version
-3. Run build & tests
-4. Create release tag
+1. Strip the snapshot suffix to normalize the release version
+2. Commit the normalized version if changed
+3. Install dependencies, build, and run tests
+4. Create and push a git tag (e.g. `v1.2.0`) if it doesn't already exist
+
+Example commit:
+
+```
+chore: normalize release version 1.2.0 [skip ci]
+```
 
 ---
 
@@ -390,8 +399,9 @@ Responsibilities:
 │       └── main-release.yml
 │
 ├── scripts
-│   ├── increment-snapshot.sh
-│   └── strip-snapshot-version.sh
+│   ├── bump-snapshot-version.sh
+│   ├── strip-snapshot-version.sh
+│   └── validate-feature-version.sh
 │
 ├── src
 │   └── index.js
@@ -400,16 +410,43 @@ Responsibilities:
 │   └── version.test.js
 │
 ├── package.json
-└── README.md
+└── README.MD
 ```
 
 ---
 
 # Scripts
 
+## validate-feature-version.sh
+
+Validates the feature branch version before building. Ensures the version is a clean semver, is greater than `main`, and is not already reserved by another feature branch.
+
+```bash
+bash scripts/validate-feature-version.sh
+```
+
+---
+
+## bump-snapshot-version.sh
+
+Increments the snapshot version suffix, or adds `-1` if no snapshot suffix exists.
+
+Example:
+
+```
+1.2.0 → 1.2.0-1
+1.2.0-1 → 1.2.0-2
+```
+
+```bash
+bash scripts/bump-snapshot-version.sh
+```
+
+---
+
 ## strip-snapshot-version.sh
 
-Removes snapshot suffix.
+Removes the snapshot suffix to produce a clean release version.
 
 Example:
 
@@ -417,16 +454,8 @@ Example:
 1.2.0-3 → 1.2.0
 ```
 
----
-
-## increment-snapshot.sh
-
-Increments snapshot version.
-
-Example:
-
-```
-1.2.0-1 → 1.2.0-2
+```bash
+bash scripts/strip-snapshot-version.sh
 ```
 
 ---
@@ -467,25 +496,54 @@ Git Tag | `v1.2.0` |
 
 # Benefits
 
-This approach provides:
+## Simplified Branch Strategy
 
-- Automated semantic versioning
-- Consistent Git tags
-- No manual version mistakes
-- Clean release history
+This approach uses only `feature/*` branches and `main`, removing the need for long-lived branches such as `develop`, `release`, `uat`, or `staging`. Multiple environment branches often lead to branch drift, repeated merge conflicts, confusion about which branch reflects the true release state, and harder rollback management. With this model, `main` is the single source of truth for releases, and Git tags on `main` are promoted across all environments.
+
+## Release and Backout Manifest Support
+
+Version tags make it straightforward to maintain release manifests and backout manifests for deployments.
+
+Example release manifest:
+
+```
+payment-service = v1.2.0
+auth-service    = v3.4.1
+order-service   = v2.1.5
+```
+
+Example backout manifest:
+
+```
+payment-service = v1.1.8
+auth-service    = v3.4.0
+order-service   = v2.1.4
+```
+
+Without proper version tagging, it becomes difficult to know exactly which code was released and what version should be rolled back.
+
+## One Main Branch for All Environments
+
+Instead of separate environment branches, teams map environments to specific tags from `main`:
+
+| Environment | Deployed Version |
+|---|---|
+| DEV | `v1.3.0` |
+| SIT | `v1.2.1` |
+| STG | `v1.2.0` |
+| PROD | `v1.2.0` |
+
+The same tagged artifact is promoted across environments rather than rebuilding from different branches.
+
+## Additional Benefits
+
+- Automated semantic versioning with no manual version mistakes
+- Consistent Git tags for productionised releases
+- Lower-environment deployments from feature branch snapshots
+- Reliable rollback to a previously known stable tag
+- Better auditability and traceability (what was deployed, when, and what changes are included)
+- Cleaner Git history and reduced merge complexity
 - Clear traceability from feature → release
-
----
-
-# Future Improvements
-
-Possible enhancements:
-
-- Automatic CHANGELOG generation
-- GitHub Releases creation
-- npm package publishing
-- automated minor/patch bump detection
-- release notes generation
 
 ---
 
