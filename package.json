@@ -1,6 +1,6 @@
 {
   "name": "demo-npm-semver",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Demo npm repository for semantic versioning with GitHub Actions",
   "main": "src/index.js",
   "scripts": {

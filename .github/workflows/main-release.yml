@@ -80,14 +80,14 @@ jobs:
           CLEAN_VERSION="${VERSION%%-*}"
           echo "version=$CLEAN_VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Create git tag if not exists
+      - name: Create git tag
         run: |
           TAG="v${{ steps.version.outputs.version }}"
           if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists"
-          else
-            git config user.name "github-actions"
-            git config user.email "github-actions@github.com"
-            git tag "$TAG"
-            git push origin "$TAG"
+            echo "Error: Tag $TAG already exists. Duplicate release version detected."
+            exit 1
           fi
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag "$TAG"
+          git push origin "$TAG"

@@ -92,15 +92,11 @@ The feature branch must update `package.json` to a version higher than `main` be
 
 ## Duplicate Version Protection
 
-The workflow prevents duplicate releases.
-
-If a tag already exists:
+The workflow prevents duplicate releases. If a tag already exists, the main release build will fail:
 
 ```
-v1.2.0 already exists
+Error: Tag v1.2.0 already exists. Duplicate release version detected.
 ```
-
-the workflow will skip tag creation.
 
 ---
 
