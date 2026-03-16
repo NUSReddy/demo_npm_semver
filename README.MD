@@ -1,6 +1,6 @@
-# Demo NPM Semantic Version Automation
+# Demo NPM Semantic Version
 
-This repository demonstrates a **fully automated semantic version workflow for Node.js projects** using **GitHub Actions**, **feature branches**, and **snapshot versions**.
+This repository demonstrates a **semantic version workflow for Node.js projects** using **GitHub Actions**, **feature branches**, and **snapshot versions**.
 
 The workflow automatically:
 
